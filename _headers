@@ -1,0 +1,10 @@
+# manifest と service worker を正しいMIME・キャッシュ制御で配信
+/manifest.json
+  Content-Type: application/manifest+json
+
+/service-worker.js
+  Content-Type: application/javascript
+  Cache-Control: no-cache
+
+/icons/*
+  Cache-Control: public, max-age=31536000, immutable

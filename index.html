@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a17">
+<title>PROMPT FORGE — プロンプト設計台</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --ink:#1a1a17; --paper:#f3f1ea; --paper-2:#e9e6dc;
+    --line:#c9c4b5; --rule:#a8a294; --accent:#b5481f; --accent-soft:#d98e6f;
+    --ok:#3f6b4f; --muted:#7a7567;
+    --mono:'SFMono-Regular',Menlo,Consolas,'Liberation Mono',monospace;
+    --sans:'Helvetica Neue',Arial,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--sans);color:var(--ink);background:var(--paper);
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:28px 28px;background-position:-1px -1px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  header{border-bottom:2px solid var(--ink);background:var(--paper);padding:14px 20px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:30}
+  .brand{font-family:var(--mono);font-weight:700;font-size:20px;letter-spacing:-0.5px}
+  .brand b{color:var(--accent)}
+  .tagline{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+  .header-spacer{flex:1}
+  .hbtn{font-family:var(--mono);font-size:11px;letter-spacing:.5px;border:1px solid var(--ink);background:var(--paper);color:var(--ink);padding:6px 12px;cursor:pointer;text-transform:uppercase}
+  .hbtn:hover{background:var(--ink);color:var(--paper)}
+  .modes{display:flex;gap:0;border-bottom:1px solid var(--rule);background:var(--paper-2);overflow-x:auto}
+  .mode{font-family:var(--mono);font-size:12px;letter-spacing:.5px;padding:11px 18px;cursor:pointer;border:none;background:none;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;display:flex;align-items:center;gap:8px}
+  .mode .num{font-size:10px;color:var(--accent)}
+  .mode.active{color:var(--ink);border-bottom-color:var(--accent);background:var(--paper)}
+  .mode:hover:not(.active){color:var(--ink)}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:calc(100vh - 110px)}
+  .pane{padding:22px;overflow-y:auto}
+  .pane.left{border-right:2px solid var(--ink);background:rgba(243,241,234,.7)}
+  .pane.right{background:rgba(233,230,220,.5)}
+  @media(max-width:820px){.wrap{grid-template-columns:1fr}.pane.left{border-right:none;border-bottom:2px solid var(--ink)}}
+  .pane-label{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .pane-label::before{content:"";width:18px;height:1px;background:var(--rule)}
+  .pane-label.mt{margin-top:24px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink);margin-bottom:6px}
+  .field .hint{font-size:11px;color:var(--muted);font-family:var(--sans);text-transform:none;letter-spacing:0;margin-left:8px}
+  .field input,.field textarea,.field select{width:100%;font-family:var(--mono);font-size:13px;line-height:1.6;border:1px solid var(--rule);background:var(--paper);color:var(--ink);padding:9px 11px;resize:vertical}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(181,72,31,.12)}
+  .field textarea{min-height:64px}
+  textarea.big{min-height:200px}
+  .preview{font-family:var(--mono);font-size:13px;line-height:1.7;background:var(--paper);border:1px solid var(--rule);padding:20px;white-space:pre-wrap;word-break:break-word;min-height:280px}
+  .preview .ph{color:var(--muted);font-style:italic}
+  .meta-bar{display:flex;gap:18px;align-items:center;margin-top:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .meta-bar b{color:var(--ink)}
+  .actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .btn{font-family:var(--mono);font-size:12px;letter-spacing:.5px;text-transform:uppercase;border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:9px 16px;cursor:pointer}
+  .btn:hover{background:var(--accent);border-color:var(--accent)}
+  .btn.ghost{background:var(--paper);color:var(--ink)}
+  .btn.ghost:hover{background:var(--ink);color:var(--paper)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+  @media(max-width:520px){.tpl-grid{grid-template-columns:1fr}}
+  .tpl-card{border:1px solid var(--rule);background:var(--paper);padding:13px;cursor:pointer;text-align:left}
+  .tpl-card:hover{border-color:var(--accent)}
+  .tpl-card.sel{border-color:var(--accent);border-width:2px;background:#fff}
+  .tpl-card .t{font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:4px}
+  .tpl-card .d{font-size:11px;color:var(--muted)}
+  .check-item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line);font-family:var(--mono);font-size:12px}
+  .check-item .mark{font-weight:700;flex-shrink:0;width:18px}
+  .check-item.pass .mark{color:var(--ok)}
+  .check-item.warn .mark{color:var(--accent)}
+  .check-item .body small{display:block;color:var(--muted);font-size:11px;margin-top:2px;font-family:var(--sans)}
+  .drawer-bg{position:fixed;inset:0;background:rgba(26,26,23,.5);z-index:40;display:none}
+  .drawer-bg.open{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(440px,92vw);background:var(--paper);border-left:2px solid var(--ink);z-index:50;transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column}
+  .drawer.open{transform:translateX(0)}
+  .drawer-head{padding:16px 20px;border-bottom:2px solid var(--ink);display:flex;align-items:center;justify-content:space-between}
+  .drawer-head .t{font-family:var(--mono);font-weight:700;letter-spacing:.5px}
+  .drawer-body{overflow-y:auto;padding:14px 20px;flex:1}
+  .hist-item{border:1px solid var(--rule);background:var(--paper);padding:12px;margin-bottom:10px}
+  .hist-item:hover{border-color:var(--accent)}
+  .hist-item .ht{font-family:var(--mono);font-size:12px;font-weight:700;margin-bottom:3px;display:flex;justify-content:space-between;gap:8px}
+  .hist-item .ht .tag{color:var(--accent);font-size:10px;font-weight:400}
+  .hist-item .hp{font-size:11px;color:var(--muted);font-family:var(--mono);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+  .hist-item .hd{font-size:10px;color:var(--muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .hist-item .hact{display:flex;gap:10px}
+  .hist-item .lnk{cursor:pointer;text-decoration:underline}
+  .hist-item .lnk.del{color:var(--accent)}
+  .hist-item .lnk.cmp{color:var(--ink)}
+  .hist-item.cmp-pick{border-color:var(--accent);border-width:2px}
+  .empty{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:40px 10px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:12px;padding:11px 20px;z-index:60;opacity:0;transition:.2s;pointer-events:none;letter-spacing:.5px;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .shot{border:1px solid var(--rule);background:var(--paper);padding:11px;margin-bottom:10px}
+  .shot .shot-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .shot .shot-head .n{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.5px}
+  .shot .rm{font-family:var(--mono);font-size:10px;color:var(--accent);cursor:pointer;border:1px solid var(--rule);background:var(--paper);padding:3px 8px}
+  .shot textarea{margin-bottom:6px}
+  .add-row{font-family:var(--mono);font-size:11px;color:var(--accent);cursor:pointer;text-transform:uppercase;letter-spacing:.5px;border:1px dashed var(--accent);padding:7px 12px;display:inline-block;background:var(--paper)}
+  .add-row:hover{background:var(--accent);color:var(--paper)}
+  .li-box{display:flex;flex-direction:column;gap:7px}
+  .li-row{display:flex;align-items:center;gap:8px}
+  .li-row .li-bullet{font-family:var(--mono);color:var(--accent);font-size:14px;flex-shrink:0;width:10px;text-align:center}
+  .li-row input{flex:1;font-family:var(--mono);font-size:13px;line-height:1.6;border:1px solid var(--rule);background:var(--paper);color:var(--ink);padding:8px 11px}
+  .li-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(181,72,31,.12)}
+  .li-row .li-rm{font-family:var(--mono);color:var(--muted);cursor:pointer;flex-shrink:0;width:22px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid var(--rule);background:var(--paper)}
+  .li-row .li-rm:hover{color:var(--paper);background:var(--accent);border-color:var(--accent)}
+  .sf-box{display:flex;flex-direction:column;gap:7px}
+  .sf-row{display:flex;align-items:center;gap:6px}
+  .sf-row .sf-num{font-family:var(--mono);font-size:10px;color:var(--muted);width:16px;text-align:right;flex-shrink:0}
+  .sf-row .sf-depth{font-family:var(--mono);font-size:12px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);padding:7px 4px;flex-shrink:0;width:52px}
+  .sf-row .sf-kind{font-size:14px;border:1px solid var(--rule);background:var(--paper);cursor:pointer;width:34px;height:32px;flex-shrink:0;line-height:1;padding:0}
+  .sf-row .sf-kind.dir{border-color:var(--accent)}
+  .sf-row input{flex:1;min-width:0;font-family:var(--mono);font-size:13px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);padding:7px 10px}
+  .sf-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(181,72,31,.12)}
+  .sf-row .sf-mv{font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;width:20px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--rule);background:var(--paper);flex-shrink:0}
+  .sf-row .sf-mv:hover{color:var(--ink);border-color:var(--accent)}
+  .sf-row .sf-rm{font-family:var(--mono);color:var(--muted);cursor:pointer;width:22px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--rule);background:var(--paper);flex-shrink:0}
+  .sf-row .sf-rm:hover{color:var(--paper);background:var(--accent);border-color:var(--accent)}
+  .vars{border:1px solid var(--accent);background:rgba(181,72,31,.05);padding:14px;margin-top:16px}
+  .vars .vrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .vars .vrow:last-child{margin-bottom:0}
+  .vars .vkey{font-family:var(--mono);font-size:12px;color:var(--accent);min-width:120px;font-weight:700}
+  .vars .vrow input{flex:1;font-family:var(--mono);font-size:12px;border:1px solid var(--rule);background:var(--paper);padding:6px 9px}
+  .test-out{font-family:var(--sans);font-size:13px;line-height:1.7;background:#fff;border:1px solid var(--rule);padding:16px;white-space:pre-wrap;word-break:break-word;margin-top:12px;min-height:60px}
+  .test-out.err{border-color:var(--accent);color:var(--accent)}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  @media(max-width:640px){.cmp-grid{grid-template-columns:1fr}}
+  .cmp-col h4{font-family:var(--mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;color:var(--accent)}
+  .cmp-box{font-family:var(--mono);font-size:12px;line-height:1.6;background:var(--paper);border:1px solid var(--rule);padding:14px;white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow-y:auto}
+  .cmp-box ins{background:rgba(63,107,79,.18);text-decoration:none}
+  .cmp-box del{background:rgba(181,72,31,.16);text-decoration:line-through;opacity:.8}
+  .modal-bg{position:fixed;inset:0;background:rgba(26,26,23,.55);z-index:55;display:none;align-items:center;justify-content:center;padding:20px}
+  .modal-bg.open{display:flex}
+  .modal{background:var(--paper);border:2px solid var(--ink);max-width:900px;width:100%;max-height:88vh;overflow-y:auto;padding:22px}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .modal-head .t{font-family:var(--mono);font-weight:700;letter-spacing:.5px}
+  .safe-bottom{height:env(safe-area-inset-bottom)}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">PROMPT&nbsp;<b>FORGE</b></span>
+  <span class="tagline">プロンプト設計台</span>
+  <span class="header-spacer"></span>
+  <button class="hbtn" id="saveBtn">保存</button>
+  <button class="hbtn" id="histBtn">履歴</button>
+  <button class="hbtn" id="newBtn">新規</button>
+</header>
+
+<nav class="modes" id="modes">
+  <button class="mode active" data-mode="framework"><span class="num">01</span>フレームワーク</button>
+  <button class="mode" data-mode="freeform"><span class="num">02</span>自由記述+補助</button>
+  <button class="mode" data-mode="template"><span class="num">03</span>テンプレート</button>
+  <button class="mode" data-mode="claudemd"><span class="num">04</span>CLAUDE.md</button>
+</nav>
+
+<div class="wrap">
+  <div class="pane left" id="leftPane"></div>
+  <div class="pane right">
+    <div class="pane-label">出力プレビュー</div>
+    <div class="preview" id="preview"><span class="ph">左で入力すると、ここに組み上がった内容が表示されます。</span></div>
+    <div class="meta-bar">
+      <span>文字数 <b id="charCount">0</b></span>
+      <span>概算トークン <b id="tokenCount">0</b></span>
+      <span>行数 <b id="lineCount">0</b></span>
+    </div>
+    <div id="varsWrap"></div>
+    <div class="actions">
+      <button class="btn" id="copyBtn">コピー</button>
+      <button class="btn ghost" id="mdBtn">.md 書き出し</button>
+      <button class="btn ghost" id="checkBtn">品質チェック</button>
+      <button class="btn ghost" id="testBtn">Claudeで試す</button>
+    </div>
+    <div id="testWrap" style="display:none">
+      <div class="pane-label mt">テスト実行（Claude Sonnet）</div>
+      <div class="test-out" id="testOut"></div>
+    </div>
+    <div id="checkPanel" style="display:none">
+      <div class="pane-label mt">品質チェック</div>
+      <div id="checkList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-bg" id="drawerBg"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <span class="t">保存した下書き</span>
+    <button class="hbtn" id="closeDrawer">閉じる</button>
+  </div>
+  <div class="drawer-body">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:12px">「比較」を2件選ぶと差分を表示します</div>
+    <div id="histList"></div>
+  </div>
+</aside>
+
+<div class="modal-bg" id="cmpModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="t">版の比較（差分）</span>
+      <button class="hbtn" id="closeCmp">閉じる</button>
+    </div>
+    <div class="cmp-grid">
+      <div class="cmp-col"><h4 id="cmpAt">A</h4><div class="cmp-box" id="cmpA"></div></div>
+      <div class="cmp-col"><h4 id="cmpBt">B</h4><div class="cmp-box" id="cmpB"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="safe-bottom"></div>
+
+<script>
+const LS_KEY='promptforge.history.v2';
+const $=s=>document.querySelector(s);
+let mode='framework';
+
+const state={
+  framework:{role:'',context:'',task:'',thinking:'',constraints:'',forbidden:'',format:'',lang:'',success:'',shots:[]},
+  freeform:{text:''},
+  template:{selected:null,fields:{}},
+  claudemd:{project:'',role:'',stack:[''],structure:[{name:'',depth:0,dir:true}],rules:[''],style:[''],forbidden:[''],commands:[''],context:''}
+};
+let varValues={};
+
+const TEMPLATES=[
+  {id:'summarize',title:'要約',desc:'長文を指定粒度で要約',
+   fields:[{k:'material',label:'対象テキスト',type:'area',ph:'要約したい文章。{{材料}}と変数化も可'},{k:'length',label:'長さ',type:'text',ph:'例: 200字 / 3行'},{k:'audience',label:'読み手',type:'text',ph:'例: 経営層'}],
+   tpl:f=>`以下のテキストを${f.length||'簡潔に'}要約してください。\n読み手は${f.audience||'一般'}を想定し、そのまま使える粒度にしてください。\n\n# 対象テキスト\n${f.material||'（貼り付け）'}`},
+  {id:'rewrite',title:'文章リライト',desc:'トーン・目的に合わせ書き直し',
+   fields:[{k:'material',label:'元の文章',type:'area',ph:'書き直したい文章'},{k:'tone',label:'トーン',type:'text',ph:'例: 丁寧でフォーマル'},{k:'goal',label:'目的',type:'text',ph:'例: 社内通知'}],
+   tpl:f=>`次の文章を「${f.tone||'適切なトーン'}」で書き直してください。\n目的は${f.goal||'（指定なし）'}です。意味は変えず、より伝わる表現に。\n\n# 元の文章\n${f.material||'（貼り付け）'}`},
+  {id:'ideate',title:'アイデア出し',desc:'制約付きで案を量産',
+   fields:[{k:'theme',label:'テーマ',type:'text',ph:'例: 会員継続率を上げる施策'},{k:'count',label:'案の数',type:'text',ph:'例: 10案'},{k:'constraint',label:'制約条件',type:'area',ph:'例: 予算ゼロ'}],
+   tpl:f=>`「${f.theme||'（テーマ未設定）'}」について、アイデアを${f.count||'10案'}出してください。\n各案は1行の要点＋一言補足で。\n\n# 制約条件\n${f.constraint||'特になし'}`},
+  {id:'analyze',title:'分析・壁打ち',desc:'観点を指定して深掘り',
+   fields:[{k:'subject',label:'分析対象',type:'area',ph:'例: この事業計画の妥当性'},{k:'lens',label:'分析の観点',type:'area',ph:'例: 収益性 / リスク'},{k:'output',label:'求める出力',type:'text',ph:'例: 強み3点・懸念3点・推奨'}],
+   tpl:f=>`次の対象を分析してください。\n\n# 対象\n${f.subject||'（記入）'}\n\n# 観点\n${f.lens||'多角的に'}\n\n# 出力形式\n${f.output||'結論→根拠の順で簡潔に'}`},
+  {id:'code',title:'コード生成',desc:'バイブコーディング用',
+   fields:[{k:'goal',label:'作りたいもの',type:'area',ph:'例: 単一HTMLのToDoアプリ'},{k:'tech',label:'技術前提',type:'text',ph:'例: HTML/JS単一ファイル / PWA込み'},{k:'detail',label:'仕様・制約',type:'area',ph:'例: localStorage保存 / 相対パス'}],
+   tpl:f=>`次の要件でコードを作ってください。非エンジニアにわかる構造説明を添えて。\n\n# 作りたいもの\n${f.goal||'（記入）'}\n\n# 技術前提\n${f.tech||'指定なし'}\n\n# 仕様・制約\n${f.detail||'特になし'}`},
+  {id:'email',title:'メール・連絡文',desc:'宛先と要件から文面',
+   fields:[{k:'to',label:'宛先・関係',type:'text',ph:'例: 取引先の担当者'},{k:'purpose',label:'用件',type:'area',ph:'例: 納期遅延のお詫び'},{k:'tone',label:'トーン',type:'text',ph:'例: 丁寧'}],
+   tpl:f=>`${f.to||'相手'}宛のメール文面を作成してください。${f.tone?`トーンは${f.tone}で。`:''}件名案も付けて。\n\n# 用件\n${f.purpose||'（記入）'}`},
+
+  {id:'minutes',title:'議事録要約',desc:'会議メモを構造化',
+   fields:[{k:'memo',label:'会議メモ・文字起こし',type:'area',ph:'箇条書きや文字起こしを貼り付け'},{k:'focus',label:'重視する観点',type:'text',ph:'例: 決定事項とToDoを明確に'}],
+   tpl:f=>`次の会議メモを議事録として整理してください。\n\n# 出力形式\n- 決定事項\n- 議論された論点\n- ToDo（担当者・期限が分かれば併記）\n- 次回までの宿題\n${f.focus?`\n特に${f.focus}。`:''}\n\n# 会議メモ\n${f.memo||'（貼り付け）'}`},
+
+  {id:'agenda',title:'会議アジェンダ',desc:'目的から議題を設計',
+   fields:[{k:'goal',label:'会議の目的',type:'area',ph:'例: 来月の販促施策を決定する'},{k:'time',label:'所要時間',type:'text',ph:'例: 60分'},{k:'members',label:'参加者',type:'text',ph:'例: 店長・販促担当・本部'}],
+   tpl:f=>`次の会議のアジェンダを作成してください。\n各議題に時間配分と「この議題のゴール」を付けてください。\n\n# 会議の目的\n${f.goal||'（記入）'}\n\n# 条件\n所要時間: ${f.time||'未定'} / 参加者: ${f.members||'未定'}`},
+
+  {id:'manual',title:'業務マニュアル',desc:'手順を誰でも再現可能に',
+   fields:[{k:'task',label:'対象業務',type:'text',ph:'例: 会員登録の受付手順'},{k:'steps',label:'大まかな流れ・補足',type:'area',ph:'分かる範囲の手順や注意点'},{k:'reader',label:'読み手',type:'text',ph:'例: 新人スタッフ'}],
+   tpl:f=>`「${f.task||'（業務名）'}」の業務マニュアルを作成してください。\n読み手は${f.reader||'初めて担当する人'}。前提知識ゼロでも再現できる粒度で、番号付き手順と「つまずきやすい点」を含めてください。\n\n# 分かっている流れ・補足\n${f.steps||'（記入）'}`},
+
+  {id:'swot',title:'SWOT分析',desc:'強み弱み機会脅威を整理',
+   fields:[{k:'target',label:'分析対象',type:'text',ph:'例: 当店のサブスク会員サービス'},{k:'info',label:'前提情報',type:'area',ph:'例: 競合状況・自社の特徴・市場環境'}],
+   tpl:f=>`「${f.target||'（対象）'}」のSWOT分析を行ってください。\n\n# 進め方\nまず強み(S)弱み(W)機会(O)脅威(T)を各3〜5点挙げ、最後に「掛け合わせ（強み×機会など）から導く具体的な打ち手」を3点提示してください。\n\n# 前提情報\n${f.info||'（記入。不足分は一般論で補完）'}`},
+
+  {id:'kpi',title:'KPI設計',desc:'目標を測定可能な指標に',
+   fields:[{k:'goal',label:'達成したい目標',type:'area',ph:'例: 会員の解約率を下げる'},{k:'period',label:'期間',type:'text',ph:'例: 半期'},{k:'resource',label:'使えるデータ・資源',type:'area',ph:'例: 会員管理システムの利用ログ'}],
+   tpl:f=>`次の目標に対するKPIを設計してください。\n\n# 進め方\n最終目標(KGI)を1つ定義し、それを分解した先行指標(KPI)を3〜5個提案してください。各KPIに「測定方法」「目標値の考え方」を添えてください。\n\n# 目標\n${f.goal||'（記入）'}\n\n# 条件\n期間: ${f.period||'未定'}\n使えるデータ・資源: ${f.resource||'（記入）'}`},
+
+  {id:'compete',title:'競合分析',desc:'自社と競合を比較',
+   fields:[{k:'own',label:'自社・自店',type:'text',ph:'例: 当店の家電サブスク'},{k:'rivals',label:'競合',type:'area',ph:'例: A社の月額プラン / B社の買い切り'},{k:'axis',label:'比較軸',type:'text',ph:'例: 価格・サポート・解約しやすさ'}],
+   tpl:f=>`自社と競合を比較分析してください。\n\n# 出力形式\n比較軸ごとの表 → そこから読み取れる自社の優位点・劣位点 → 取るべき差別化の方向性。\n\n# 自社\n${f.own||'（記入）'}\n\n# 競合\n${f.rivals||'（記入）'}\n\n# 比較軸\n${f.axis||'価格・品質・サポートなど妥当な軸で'}`},
+
+  {id:'decision',title:'意思決定マトリクス',desc:'選択肢を基準で採点',
+   fields:[{k:'question',label:'決めたいこと',type:'area',ph:'例: どの解約防止施策を優先するか'},{k:'options',label:'選択肢',type:'area',ph:'1行1案で。例:\nクーポン配布\n個別フォロー\n料金プラン見直し'},{k:'criteria',label:'評価基準',type:'text',ph:'例: 効果・コスト・実現速度'}],
+   tpl:f=>`次の意思決定を支援してください。\n\n# 進め方\n各選択肢を評価基準ごとに5段階で採点した表を作り、合計点と「ただし点数だけで決めるべきでない論点」を添え、最後に推奨案を1つ示してください。\n\n# 決めたいこと\n${f.question||'（記入）'}\n\n# 選択肢\n${f.options||'（記入）'}\n\n# 評価基準\n${f.criteria||'効果・コスト・実現性'}`},
+
+  {id:'slide',title:'資料・スライド構成',desc:'伝える順番を設計',
+   fields:[{k:'topic',label:'資料のテーマ',type:'text',ph:'例: 新サブスクプランの社内提案'},{k:'audience',label:'聞き手',type:'text',ph:'例: 経営層'},{k:'goal',label:'ゴール',type:'area',ph:'例: 予算承認を得る'},{k:'count',label:'枚数の目安',type:'text',ph:'例: 10枚'}],
+   tpl:f=>`プレゼン資料の構成案を作成してください。\n\n# 進め方\n聞き手の関心から逆算し、スライドごとに「タイトル / 伝える要点 / 入れるべき図表」を一覧にしてください。最後に想定される反論と備えるべき準備を添えてください。\n\n# 条件\nテーマ: ${f.topic||'（記入）'}\n聞き手: ${f.audience||'未定'} / ゴール: ${f.goal||'（記入）'} / 枚数目安: ${f.count||'未定'}`},
+
+  {id:'sns',title:'SNS投稿文',desc:'媒体に合わせた文案',
+   fields:[{k:'product',label:'告知する内容',type:'area',ph:'例: 新しい会員特典の開始'},{k:'platform',label:'媒体',type:'text',ph:'例: Instagram / X'},{k:'tone',label:'トーン',type:'text',ph:'例: 親しみやすく'}],
+   tpl:f=>`${f.platform||'SNS'}向けの投稿文を3案作成してください。\n媒体の文字数感・ハッシュタグの作法に合わせ、トーンは${f.tone||'媒体に合わせて'}。各案に狙い（どんな反応を取りに行くか）を一言添えてください。\n\n# 告知内容\n${f.product||'（記入）'}`},
+
+  {id:'improve',title:'プロンプト改善',desc:'既存プロンプトを添削',
+   fields:[{k:'prompt',label:'改善したいプロンプト',type:'area',ph:'今使っているプロンプトを貼り付け'},{k:'issue',label:'不満・期待',type:'area',ph:'例: 出力がぶれる / もっと具体的にしたい'}],
+   tpl:f=>`次のプロンプトを改善してください。\n\n# 進め方\nまず弱点を「役割・文脈・指示の明確さ・出力形式・制約」の観点で指摘し、次に改善版プロンプトを提示し、最後に何をどう変えたかを箇条書きで説明してください。\n\n# 元のプロンプト\n${f.prompt||'（貼り付け）'}\n\n# 不満・期待\n${f.issue||'（記入）'}`},
+
+  {id:'translate',title:'翻訳・トーン調整',desc:'文脈を保った翻訳',
+   fields:[{k:'text',label:'原文',type:'area',ph:'翻訳したい文章'},{k:'dir',label:'翻訳方向',type:'text',ph:'例: 日本語→英語'},{k:'use',label:'用途・トーン',type:'text',ph:'例: ビジネスメール / カジュアル'}],
+   tpl:f=>`次の文章を${f.dir||'指定の言語'}に翻訳してください。\n直訳ではなく、${f.use||'用途'}にふさわしい自然な表現にしてください。意味が変わる場合は注記を付けてください。\n\n# 原文\n${f.text||'（貼り付け）'}`},
+
+  {id:'retention',title:'解約防止・継続施策',desc:'サブスク会員のリテンション',
+   fields:[{k:'service',label:'サービス内容',type:'area',ph:'例: 月額制の家電サポート会員'},{k:'churn',label:'解約の状況・想定理由',type:'area',ph:'例: 入会3ヶ月以内の離脱が多い'},{k:'resource',label:'使える手段',type:'text',ph:'例: アプリ通知・店頭接客・メール'}],
+   tpl:f=>`サブスク会員の解約防止（リテンション）施策を提案してください。\n\n# 進め方\nまず解約が起きるタイミングと原因を仮説として整理し、それぞれに対する打ち手を「導入オンボーディング期 / 定着期 / 離脱兆候期」の段階別に提案してください。各施策に期待効果と実行コストの目安を添えてください。\n\n# サービス内容\n${f.service||'（記入）'}\n\n# 解約の状況・想定理由\n${f.churn||'（記入）'}\n\n# 使える手段\n${f.resource||'（記入）'}`}
+];
+
+function field(label,hint,inner){return `<div class="field"><label>${label}${hint?`<span class="hint">${hint}</span>`:''}</label>${inner}</div>`}
+function ta(id,val,ph,big){return `<textarea id="${id}" class="${big?'big':''}" placeholder="${ph}">${esc(val)}</textarea>`}
+function inp(id,val,ph){return `<input id="${id}" value="${esc(val)}" placeholder="${ph}">`}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function renderLeft(){
+  const L=$('#leftPane');
+  if(mode==='framework'){
+    const s=state.framework;
+    L.innerHTML=`<div class="pane-label">フレームワーク入力</div>
+      ${field('役割 / ROLE','AIに演じさせる立場',inp('f_role',s.role,'例: 経験豊富な編集者として'))}
+      ${field('文脈 / CONTEXT','背景・前提',ta('f_context',s.context,'例: 社内向けに新サービスを告知したい'))}
+      ${field('指示 / TASK','やってほしいこと（最重要）',ta('f_task',s.task,'例: 告知文を3案作成して'))}
+      ${field('思考の進め方 / THINKING','どう考えさせるか。精度を最も左右する',ta('f_thinking',s.thinking,'例: 結論前に選択肢を3つ挙げ比較してから決める'))}
+      ${field('制約 / CONSTRAINTS','守らせる条件',ta('f_constraints',s.constraints,'例: 300字以内 / 専門用語は避ける'))}
+      ${field('禁止事項 / FORBIDDEN','やってはいけないこと',ta('f_forbidden',s.forbidden,'例: 断定を避ける / 絵文字を使わない'))}
+      ${field('出力形式 / FORMAT','形を指定',ta('f_format',s.format,'例: 見出し+本文 / 箇条書き'))}
+      ${field('出力言語 / LANGUAGE','任意',inp('f_lang',s.lang,'例: 日本語 / English'))}
+      ${field('完成の条件 / SUCCESS','成功した状態を定義（逆算で精度UP）',ta('f_success',s.success,'例: 担当者がそのまま送信できる完成度'))}
+      <div class="pane-label mt">出力例（フューショット）</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">入力例→理想の出力例のペアを示すと再現性が大きく上がります</div>
+      <div id="shotsBox"></div>
+      <button class="add-row" id="addShot">+ 例のペアを追加</button>`;
+    bind('f_role','framework','role');bind('f_context','framework','context');bind('f_task','framework','task');
+    bind('f_thinking','framework','thinking');bind('f_constraints','framework','constraints');bind('f_forbidden','framework','forbidden');
+    bind('f_format','framework','format');bind('f_lang','framework','lang');bind('f_success','framework','success');
+    renderShots();
+    $('#addShot').onclick=()=>{state.framework.shots.push({in:'',out:''});renderShots();update()};
+  }
+  else if(mode==='freeform'){
+    const s=state.freeform;
+    L.innerHTML=`<div class="pane-label">自由記述</div>
+      ${field('プロンプト本文','{{変数}} を書くと右で値を流し込めます',ta('ff_text',s.text,'やりたいことを自由に。{{対象}} のように変数も使えます…',true))}
+      <div class="pane-label mt">構造化のヒント</div>
+      <div id="ffHints" style="font-family:var(--mono);font-size:12px;line-height:1.9;color:var(--muted)"></div>`;
+    bind('ff_text','freeform','text');renderHints();
+  }
+  else if(mode==='template'){
+    const s=state.template;
+    let cards=TEMPLATES.map(t=>`<button class="tpl-card ${s.selected===t.id?'sel':''}" data-tpl="${t.id}"><div class="t">${t.title}</div><div class="d">${t.desc}</div></button>`).join('');
+    let fh='';
+    if(s.selected){
+      const t=TEMPLATES.find(x=>x.id===s.selected);
+      fh=`<div class="pane-label mt">${t.title} の項目</div>`+t.fields.map(fl=>{const v=s.fields[fl.k]||'';return field(fl.label,'',fl.type==='area'?ta('tp_'+fl.k,v,fl.ph):inp('tp_'+fl.k,v,fl.ph))}).join('');
+    }
+    L.innerHTML=`<div class="pane-label">テンプレートを選ぶ</div><div class="tpl-grid">${cards}</div>${fh}`;
+    L.querySelectorAll('[data-tpl]').forEach(b=>b.onclick=()=>{state.template.selected=b.dataset.tpl;if(!state.template.fields)state.template.fields={};renderLeft();update()});
+    if(s.selected){TEMPLATES.find(x=>x.id===s.selected).fields.forEach(fl=>{const el=$('#tp_'+fl.k);if(el)el.oninput=()=>{state.template.fields[fl.k]=el.value;update()}})}
+  }
+  else if(mode==='claudemd'){
+    const s=state.claudemd;
+    const listFields=[
+      {k:'stack',label:'技術スタック / 環境',ph:'例: 単一HTML/JS PWA'},
+      {k:'rules',label:'規約・ルール',ph:'例: service-workerはキャッシュ版数を付ける'},
+      {k:'style',label:'応答・コードのスタイル',ph:'例: 結論→根拠→具体例。前置き無し'},
+      {k:'forbidden',label:'禁止事項',ph:'例: ポップ/ゲーミング配色を避ける'},
+      {k:'commands',label:'よく使うコマンド / 手順',ph:'例: デプロイ = git push のみ'}
+    ];
+    L.innerHTML=`<div class="pane-label">CLAUDE.md ビルダー</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:16px">プロジェクト直下に置く、Claudeへの恒久的な指示書を組み立てます。列挙項目は「+ 追加」で1行ずつ足せます</div>
+      ${field('プロジェクト概要','何を作る/扱うプロジェクトか',ta('c_project',s.project,'例: 静岡支店の業務ポータル。社内向けPWA群を管理する'))}
+      ${field('Claudeの役割','どう振る舞ってほしいか',ta('c_role',s.role,'例: 非エンジニア向けに構造説明を添えて実装する開発パートナー'))}
+      <div id="lf_stack"></div>
+      <div id="structFrame"></div>
+      <div id="treePreview"></div>
+      <div id="lf_rules"></div>
+      <div id="lf_style"></div>
+      <div id="lf_forbidden"></div>
+      <div id="lf_commands"></div>
+      ${field('補足コンテキスト','任意',ta('c_context',s.context,'例: 参照ドキュメントや既存リポジトリの場所'))}`;
+    bind('c_project','claudemd','project');bind('c_role','claudemd','role');
+    bind('c_context','claudemd','context');
+    listFields.forEach(lf=>renderListField(lf));
+    renderStructFrame();
+    renderTreePreview();
+  }
+}
+function bind(id,m,key){const el=$('#'+id);if(el)el.oninput=()=>{state[m][key]=el.value;update()}}
+
+/* 列挙項目を「1行ずつ追加」する箇条書きフレームとして描画 */
+function renderListField(lf){
+  const host=$('#lf_'+lf.k);if(!host)return;
+  let arr=state.claudemd[lf.k];
+  if(!Array.isArray(arr)){arr=[arr||''];state.claudemd[lf.k]=arr}
+  if(!arr.length){arr.push('')}
+  const rows=arr.map((v,i)=>`<div class="li-row">
+      <span class="li-bullet">•</span>
+      <input data-lk="${lf.k}" data-li="${i}" value="${esc(v)}" placeholder="${lf.ph}">
+      <span class="li-rm" data-lk="${lf.k}" data-lirm="${i}">×</span>
+    </div>`).join('');
+  host.innerHTML=`<div class="field">
+      <label>${lf.label}<span class="hint">1行＝1項目。「+ 追加」で増やせます</span></label>
+      <div class="li-box">${rows}</div>
+      <button class="add-row" data-ladd="${lf.k}" style="margin-top:8px">+ 追加</button>
+    </div>`;
+  host.querySelectorAll('[data-li]').forEach(el=>el.oninput=()=>{state.claudemd[el.dataset.lk][el.dataset.li]=el.value;update()});
+  host.querySelectorAll('[data-lirm]').forEach(el=>el.onclick=()=>{
+    const k=el.dataset.lk;state.claudemd[k].splice(el.dataset.lirm,1);
+    if(!state.claudemd[k].length)state.claudemd[k].push('');
+    renderListField(lf);update();
+  });
+  host.querySelector('[data-ladd]').onclick=()=>{state.claudemd[lf.k].push('');renderListField(lf);update();
+    const ins=host.querySelectorAll('[data-li]');if(ins.length)ins[ins.length-1].focus()};
+}
+
+/* フォルダ/ファイルを行ごとに「名前+階層+種別」で入力するフレーム */
+function renderStructFrame(){
+  const host=$('#structFrame');if(!host)return;
+  let rows=state.claudemd.structure;
+  if(!Array.isArray(rows)||!rows.length){rows=[{name:'',depth:0,dir:true}];state.claudemd.structure=rows}
+  const depthOpts=d=>[0,1,2,3,4,5].map(n=>`<option value="${n}" ${n===d?'selected':''}>L${n}</option>`).join('');
+  const html=rows.map((r,i)=>`<div class="sf-row">
+      <span class="sf-num">${i+1}</span>
+      <select data-sfd="${i}" class="sf-depth">${depthOpts(r.depth)}</select>
+      <button class="sf-kind ${r.dir?'dir':'file'}" data-sfk="${i}" title="フォルダ/ファイル切替">${r.dir?'📁':'📄'}</button>
+      <input data-sfn="${i}" value="${esc(r.name)}" placeholder="${r.dir?'フォルダ名':'ファイル名'}">
+      <span class="sf-mv" data-sfup="${i}" title="上へ">↑</span>
+      <span class="sf-mv" data-sfdn="${i}" title="下へ">↓</span>
+      <span class="sf-rm" data-sfrm="${i}" title="削除">×</span>
+    </div>`).join('');
+  host.innerHTML=`<div class="field">
+      <label>プロジェクト構成 / STRUCTURE<span class="hint">名前を入れ、L0〜で階層を、📁/📄で種別を指定。下にツリーが組み上がります</span></label>
+      <div class="sf-box">${html}</div>
+      <button class="add-row" id="sfAdd" style="margin-top:8px">+ 行を追加</button>
+    </div>`;
+  host.querySelectorAll('[data-sfn]').forEach(el=>el.oninput=()=>{state.claudemd.structure[el.dataset.sfn].name=el.value;update()});
+  host.querySelectorAll('[data-sfd]').forEach(el=>el.onchange=()=>{state.claudemd.structure[el.dataset.sfd].depth=Number(el.value);update()});
+  host.querySelectorAll('[data-sfk]').forEach(el=>el.onclick=()=>{const i=el.dataset.sfk;state.claudemd.structure[i].dir=!state.claudemd.structure[i].dir;renderStructFrame();update()});
+  host.querySelectorAll('[data-sfrm]').forEach(el=>el.onclick=()=>{state.claudemd.structure.splice(el.dataset.sfrm,1);if(!state.claudemd.structure.length)state.claudemd.structure.push({name:'',depth:0,dir:true});renderStructFrame();update()});
+  host.querySelectorAll('[data-sfup]').forEach(el=>el.onclick=()=>{const i=Number(el.dataset.sfup);if(i>0){const a=state.claudemd.structure;[a[i-1],a[i]]=[a[i],a[i-1]];renderStructFrame();update()}});
+  host.querySelectorAll('[data-sfdn]').forEach(el=>el.onclick=()=>{const i=Number(el.dataset.sfdn);const a=state.claudemd.structure;if(i<a.length-1){[a[i+1],a[i]]=[a[i],a[i+1]];renderStructFrame();update()}});
+  host.querySelector('#sfAdd').onclick=()=>{const a=state.claudemd.structure;const prev=a[a.length-1]||{depth:0};a.push({name:'',depth:prev.depth,dir:true});renderStructFrame();update();const ins=host.querySelectorAll('[data-sfn]');if(ins.length)ins[ins.length-1].focus()};
+}
+
+/* ツリー生成: 行フレーム配列 {name,depth,dir} または旧インデント文字列の両対応 */
+function buildTree(input){
+  let nodes;
+  if(Array.isArray(input)){
+    nodes=input.filter(r=>r&&(r.name||'').trim()!=='').map(r=>({depth:r.depth||0,name:(r.name).trim()+(r.dir?'/':'')}));
+  } else {
+    const raw=(input||'').replace(/\t/g,'  ').replace(/\r/g,'').split('\n').filter(l=>l.trim()!=='');
+    if(!raw.length)return '';
+    const rows=raw.map(l=>{const indent=l.match(/^ */)[0].length;return {indent,name:l.trim()}});
+    const levels=[...new Set(rows.map(r=>r.indent))].sort((a,b)=>a-b);
+    nodes=rows.map(r=>({depth:levels.indexOf(r.indent),name:r.name}));
+  }
+  if(!nodes.length)return '';
+  const out=[];
+  for(let i=0;i<nodes.length;i++){
+    const d=nodes[i].depth;
+    let isLast=true;
+    for(let j=i+1;j<nodes.length;j++){
+      if(nodes[j].depth<d)break;
+      if(nodes[j].depth===d){isLast=false;break}
+    }
+    let prefix='';
+    for(let a=0;a<d;a++){
+      let ancestorHasMore=false;
+      for(let j=i+1;j<nodes.length;j++){
+        if(nodes[j].depth<a)break;
+        if(nodes[j].depth===a){ancestorHasMore=true;break}
+        if(nodes[j].depth<a+1)break;
+      }
+      prefix+=ancestorHasMore?'│ ':'  ';
+    }
+    out.push(prefix+(isLast?'└ ':'├ ')+nodes[i].name);
+  }
+  return out.join('\n');
+}
+
+function renderTreePreview(){
+  const box=$('#treePreview');if(!box)return;
+  const tree=buildTree(state.claudemd.structure);
+  if(!tree){box.innerHTML='';return}
+  box.innerHTML=`<div class="pane-label" style="margin-top:6px">ツリープレビュー</div>
+    <pre style="font-family:var(--mono);font-size:12px;line-height:1.7;background:var(--paper);border:1px solid var(--rule);padding:14px;white-space:pre;overflow-x:auto;margin-bottom:18px">${esc(tree)}</pre>`;
+}
+
+function renderShots(){
+  const box=$('#shotsBox');if(!box)return;
+  const sh=state.framework.shots;
+  if(!sh.length){box.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">例はまだありません（任意）</div>';return}
+  box.innerHTML=sh.map((p,i)=>`<div class="shot">
+     <div class="shot-head"><span class="n">例 ${i+1}</span><span class="rm" data-rm="${i}">削除</span></div>
+     <textarea data-sin="${i}" placeholder="入力例">${esc(p.in)}</textarea>
+     <textarea data-sout="${i}" placeholder="理想の出力例">${esc(p.out)}</textarea>
+   </div>`).join('');
+  box.querySelectorAll('[data-sin]').forEach(el=>el.oninput=()=>{state.framework.shots[el.dataset.sin].in=el.value;update()});
+  box.querySelectorAll('[data-sout]').forEach(el=>el.oninput=()=>{state.framework.shots[el.dataset.sout].out=el.value;update()});
+  box.querySelectorAll('[data-rm]').forEach(el=>el.onclick=()=>{state.framework.shots.splice(el.dataset.rm,1);renderShots();update()});
+}
+
+function build(){
+  if(mode==='framework'){
+    const s=state.framework;const o=[];
+    if(s.role.trim())o.push(`# 役割\n${s.role.trim()}`);
+    if(s.context.trim())o.push(`# 文脈\n${s.context.trim()}`);
+    if(s.task.trim())o.push(`# 指示\n${s.task.trim()}`);
+    if(s.thinking.trim())o.push(`# 思考の進め方\n${s.thinking.trim()}`);
+    if(s.constraints.trim())o.push(`# 制約条件\n${s.constraints.trim()}`);
+    if(s.forbidden.trim())o.push(`# 禁止事項\n${s.forbidden.trim()}`);
+    if(s.format.trim())o.push(`# 出力形式\n${s.format.trim()}`);
+    if(s.lang.trim())o.push(`# 出力言語\n${s.lang.trim()}`);
+    if(s.success.trim())o.push(`# 完成の条件\n${s.success.trim()}`);
+    const sh=s.shots.filter(p=>p.in.trim()||p.out.trim());
+    if(sh.length){o.push('# 例\n'+sh.map((p,i)=>`## 例${i+1}\n入力: ${p.in.trim()}\n出力: ${p.out.trim()}`).join('\n\n'))}
+    return o.join('\n\n');
+  }
+  if(mode==='freeform')return state.freeform.text.trim();
+  if(mode==='template'){const s=state.template;if(!s.selected)return '';return TEMPLATES.find(x=>x.id===s.selected).tpl(s.fields||{}).trim()}
+  if(mode==='claudemd'){
+    const s=state.claudemd;const o=['# CLAUDE.md'];
+    const list=k=>(Array.isArray(s[k])?s[k]:[s[k]]).map(x=>(x||'').trim()).filter(Boolean);
+    if(s.project.trim())o.push(`## プロジェクト概要\n${s.project.trim()}`);
+    if(s.role.trim())o.push(`## あなた（Claude）の役割\n${s.role.trim()}`);
+    if(list('stack').length)o.push('## 技術スタック・環境\n'+list('stack').map(x=>'- '+x).join('\n'));
+    const treeStr=buildTree(s.structure);
+    if(treeStr.trim())o.push('## プロジェクト構成\n```\n'+treeStr+'\n```');
+    if(list('rules').length)o.push('## 規約・ルール\n'+list('rules').map(x=>'- '+x).join('\n'));
+    if(list('style').length)o.push('## 応答・コードのスタイル\n'+list('style').map(x=>'- '+x).join('\n'));
+    if(list('forbidden').length)o.push('## 禁止事項\n'+list('forbidden').map(x=>'- '+x).join('\n'));
+    if(list('commands').length)o.push('## よく使うコマンド・手順\n'+list('commands').map(x=>'- '+x).join('\n'));
+    if(s.context.trim())o.push(`## 補足コンテキスト\n${s.context.trim()}`);
+    return o.join('\n\n');
+  }
+  return '';
+}
+
+function extractVars(text){const m=text.match(/\{\{\s*([^}]+?)\s*\}\}/g)||[];return [...new Set(m.map(x=>x.replace(/\{\{\s*|\s*\}\}/g,'')))]}
+function applyVars(text){let t=text;Object.keys(varValues).forEach(k=>{if(varValues[k]){const re=new RegExp('\\{\\{\\s*'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\}\\}','g');t=t.replace(re,varValues[k])}});return t}
+
+function update(){
+  const raw=build();
+  const vars=extractVars(raw);
+  const vw=$('#varsWrap');
+  if(vars.length){
+    vw.innerHTML=`<div class="vars"><div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:10px;letter-spacing:.5px">変数の流し込み</div>`+
+      vars.map(v=>`<div class="vrow"><span class="vkey">{{${esc(v)}}}</span><input data-var="${esc(v)}" value="${esc(varValues[v]||'')}" placeholder="値を入力"></div>`).join('')+`</div>`;
+    vw.querySelectorAll('[data-var]').forEach(el=>el.oninput=()=>{varValues[el.dataset.var]=el.value;update()});
+  } else vw.innerHTML='';
+  const text=applyVars(raw);
+  const pv=$('#preview');
+  if(text){pv.textContent=text}else{pv.innerHTML='<span class="ph">左で入力すると、ここに組み上がった内容が表示されます。</span>'}
+  const c=text.length;
+  $('#charCount').textContent=c;$('#tokenCount').textContent=Math.ceil(c/2.2);$('#lineCount').textContent=text?text.split('\n').length:0;
+  if(mode==='freeform')renderHints();
+  if(mode==='claudemd')renderTreePreview();
+}
+
+function renderHints(){
+  const box=$('#ffHints');if(!box)return;
+  const raw=state.freeform.text,t=raw.toLowerCase();
+  const checks=[
+    {ok:/(役割|あなたは|として)/.test(raw),l:'役割の指定（「〜として」）'},
+    {ok:/(出力|形式|箇条書き|表|json|md|見出し)/.test(t),l:'出力形式の指定'},
+    {ok:/(制約|以内|字|禁止|避け|条件)/.test(t),l:'制約条件'},
+    {ok:/(ステップ|順に|比較|まず|最初に|考えて)/.test(t),l:'思考プロセスの指定'},
+    {ok:/(例|サンプル|参考)/.test(t),l:'例の提示（任意）'},
+    {ok:raw.trim().length>40,l:'十分な具体性'}
+  ];
+  box.innerHTML=checks.map(c=>`${c.ok?'<span style="color:var(--ok)">✓</span>':'<span style="color:var(--accent)">○</span>'} ${c.l}`).join('<br>')+'<br><br><span style="font-size:11px">○ の要素を足すと精度が上がります。{{ }} で変数化も可能。</span>';
+}
+
+function runCheck(){
+  const text=applyVars(build()),t=text.toLowerCase();
+  const rules=[
+    {pass:text.trim().length>0,t:'内容がある',d:'空でないこと'},
+    {pass:/(として|役割|あなたは)/.test(text),t:'役割が明示されている',d:'立場を与えると出力が安定'},
+    {pass:/(ステップ|順に|比較|考えて|まず|思考)/.test(t),t:'思考の進め方がある',d:'考え方の指定は精度を最も左右'},
+    {pass:/(出力|形式|箇条書き|見出し|表|json|字|行)/.test(t),t:'出力形式の指定',d:'形を指定すると後工程が楽'},
+    {pass:/(制約|以内|禁止|避け|条件|字|文字)/.test(t),t:'制約条件がある',d:'長さ・禁止の枠を与える'},
+    {pass:text.trim().length>=60,t:'十分な具体性',d:'短すぎると解釈がブレる'},
+    {pass:!/(いい感じ|よろしく|適当|うまく)/.test(text),t:'曖昧表現を含まない',d:'「いい感じに」等は精度を下げる'}
+  ];
+  $('#checkList').innerHTML=rules.map(r=>`<div class="check-item ${r.pass?'pass':'warn'}"><span class="mark">${r.pass?'✓':'!'}</span><span class="body">${r.t}<small>${r.d}</small></span></div>`).join('');
+  $('#checkPanel').style.display='block';
+}
+
+async function runTest(){
+  const text=applyVars(build());
+  if(!text.trim()){toast('内容が空です');return}
+  const wrap=$('#testWrap'),out=$('#testOut');
+  wrap.style.display='block';out.classList.remove('err');
+  out.innerHTML='<span class="spinner"></span>Claudeが応答中…';
+  $('#testBtn').disabled=true;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:text}]})
+    });
+    const data=await res.json();
+    const reply=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+    out.textContent=reply||'（応答が空でした）';
+  }catch(e){
+    out.classList.add('err');out.textContent='実行に失敗しました: '+e.message;
+  }finally{$('#testBtn').disabled=false}
+}
+
+function loadHist(){try{return JSON.parse(localStorage.getItem(LS_KEY)||'[]')}catch{return[]}}
+function saveHist(a){localStorage.setItem(LS_KEY,JSON.stringify(a))}
+function saveCurrent(){
+  const text=applyVars(build());if(!text.trim()){toast('内容が空です');return}
+  const a=loadHist();
+  const title=text.replace(/^#.*\n?/,'').slice(0,24).replace(/\n/g,' ').trim()||'無題';
+  a.unshift({id:Date.now(),mode,title,preview:text.slice(0,120),full:text,
+    snapshot:JSON.parse(JSON.stringify(state[mode])),vars:JSON.parse(JSON.stringify(varValues)),
+    chars:text.length,date:new Date().toLocaleString('ja-JP',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});
+  saveHist(a.slice(0,100));toast('保存しました');renderHistList();
+}
+let cmpPick=[];
+function renderHistList(){
+  const a=loadHist(),box=$('#histList');
+  if(!a.length){box.innerHTML='<div class="empty">保存した下書きはまだありません</div>';cmpPick=[];return}
+  const ml={framework:'フレームワーク',freeform:'自由記述',template:'テンプレート',claudemd:'CLAUDE.md'};
+  box.innerHTML=a.map(h=>`<div class="hist-item ${cmpPick.includes(h.id)?'cmp-pick':''}" data-id="${h.id}">
+     <div class="ht"><span>${esc(h.title)}</span><span class="tag">${ml[h.mode]||''}</span></div>
+     <div class="hp" data-load="${h.id}">${esc(h.preview)}</div>
+     <div class="hd"><span>${h.date} · ${h.chars}字</span><span class="hact"><span class="lnk cmp" data-cmp="${h.id}">${cmpPick.includes(h.id)?'選択中':'比較'}</span><span class="lnk del" data-del="${h.id}">削除</span></span></div>
+   </div>`).join('');
+  box.querySelectorAll('[data-load]').forEach(el=>el.onclick=()=>{
+    const h=loadHist().find(x=>x.id==el.dataset.load);if(!h)return;
+    mode=h.mode;setActiveMode();state[mode]=JSON.parse(JSON.stringify(h.snapshot));varValues=JSON.parse(JSON.stringify(h.vars||{}));
+    if(mode==='claudemd'&&typeof state.claudemd.structure==='string'){
+      // 旧テキスト形式 → 行配列へ変換
+      const txt=state.claudemd.structure;
+      const raw=txt.replace(/\t/g,'  ').replace(/\r/g,'').split('\n').filter(l=>l.trim()!=='');
+      const levels=[...new Set(raw.map(l=>l.match(/^ */)[0].length))].sort((a,b)=>a-b);
+      state.claudemd.structure=raw.map(l=>{const nm=l.trim();return {name:nm.replace(/\/$/,''),depth:levels.indexOf(l.match(/^ */)[0].length),dir:/\/$/.test(nm)}});
+      if(!state.claudemd.structure.length)state.claudemd.structure=[{name:'',depth:0,dir:true}];
+    }
+    renderLeft();update();closeDrawer();toast('読み込みました');
+  });
+  box.querySelectorAll('[data-del]').forEach(el=>el.onclick=e=>{e.stopPropagation();saveHist(loadHist().filter(x=>x.id!=el.dataset.del));cmpPick=cmpPick.filter(id=>id!=el.dataset.del);renderHistList()});
+  box.querySelectorAll('[data-cmp]').forEach(el=>el.onclick=e=>{
+    e.stopPropagation();const id=Number(el.dataset.cmp);
+    if(cmpPick.includes(id))cmpPick=cmpPick.filter(x=>x!==id);else{cmpPick.push(id);if(cmpPick.length>2)cmpPick.shift()}
+    if(cmpPick.length===2)showCompare();renderHistList();
+  });
+}
+
+function diffTokens(a,b){
+  const A=a.split(/(\s+|\n)/),B=b.split(/(\s+|\n)/);
+  const n=A.length,m=B.length,dp=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i][j]=A[i]===B[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+  let i=0,j=0,outA='',outB='';
+  while(i<n&&j<m){
+    if(A[i]===B[j]){outA+=esc(A[i]);outB+=esc(B[j]);i++;j++}
+    else if(dp[i+1][j]>=dp[i][j+1]){outA+=`<del>${esc(A[i])}</del>`;i++}
+    else{outB+=`<ins>${esc(B[j])}</ins>`;j++}
+  }
+  while(i<n){outA+=`<del>${esc(A[i])}</del>`;i++}
+  while(j<m){outB+=`<ins>${esc(B[j])}</ins>`;j++}
+  return [outA,outB];
+}
+function showCompare(){
+  const a=loadHist();
+  const x=a.find(h=>h.id===cmpPick[0]),y=a.find(h=>h.id===cmpPick[1]);
+  if(!x||!y)return;
+  const [da,db]=diffTokens(x.full,y.full);
+  $('#cmpAt').textContent='A: '+x.title+' ('+x.date+')';
+  $('#cmpBt').textContent='B: '+y.title+' ('+y.date+')';
+  $('#cmpA').innerHTML=da;$('#cmpB').innerHTML=db;
+  $('#cmpModal').classList.add('open');
+}
+
+function copyPrompt(){const t=applyVars(build());if(!t.trim()){toast('内容が空です');return}navigator.clipboard.writeText(t).then(()=>toast('コピーしました'),()=>toast('コピー失敗'))}
+function exportMd(){
+  const t=applyVars(build());if(!t.trim()){toast('内容が空です');return}
+  const isCmd=mode==='claudemd';
+  const head=isCmd?'':`<!-- PROMPT FORGE / mode: ${mode} / ${new Date().toLocaleString('ja-JP')} -->\n\n`;
+  const blob=new Blob([head+t],{type:'text/markdown'});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=isCmd?'CLAUDE.md':`prompt-${Date.now()}.md`;a.click();
+  URL.revokeObjectURL(url);toast(isCmd?'CLAUDE.md を書き出しました':'.md を書き出しました');
+}
+
+function setActiveMode(){document.querySelectorAll('.mode').forEach(m=>m.classList.toggle('active',m.dataset.mode===mode))}
+function openDrawer(){renderHistList();$('#drawer').classList.add('open');$('#drawerBg').classList.add('open')}
+function closeDrawer(){$('#drawer').classList.remove('open');$('#drawerBg').classList.remove('open')}
+let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1900)}
+
+document.querySelectorAll('.mode').forEach(m=>m.onclick=()=>{mode=m.dataset.mode;setActiveMode();renderLeft();update();$('#checkPanel').style.display='none';$('#testWrap').style.display='none'});
+$('#saveBtn').onclick=saveCurrent;$('#histBtn').onclick=openDrawer;$('#closeDrawer').onclick=closeDrawer;$('#drawerBg').onclick=closeDrawer;
+$('#newBtn').onclick=()=>{
+  state.framework={role:'',context:'',task:'',thinking:'',constraints:'',forbidden:'',format:'',lang:'',success:'',shots:[]};
+  state.freeform={text:''};state.template={selected:null,fields:{}};
+  state.claudemd={project:'',role:'',stack:[''],structure:[{name:'',depth:0,dir:true}],rules:[''],style:[''],forbidden:[''],commands:[''],context:''};
+  varValues={};renderLeft();update();$('#checkPanel').style.display='none';$('#testWrap').style.display='none';toast('新規作成');
+};
+$('#copyBtn').onclick=copyPrompt;$('#mdBtn').onclick=exportMd;$('#checkBtn').onclick=runCheck;$('#testBtn').onclick=runTest;
+$('#closeCmp').onclick=()=>$('#cmpModal').classList.remove('open');
+$('#cmpModal').onclick=e=>{if(e.target.id==='cmpModal')$('#cmpModal').classList.remove('open')};
+
+renderLeft();update();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('service-worker.js').catch(()=>{}))}
+</script>
+</body>
+</html>
